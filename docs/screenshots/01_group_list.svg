@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="640" viewBox="0 0 320 640">
+  <defs>
+    <filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="2.5" flood-color="#000" flood-opacity="0.09"/></filter>
+    <filter id="f"><feDropShadow dx="0" dy="4" stdDeviation="7" flood-color="#4CAF50" flood-opacity="0.38"/></filter>
+    <!-- Splinge logo: green coin + white S, reusable -->
+    <g id="logo">
+      <circle r="11" fill="#4CAF50"/>
+      <!-- white S path centered at 0,0 -->
+      <path d="M4.5-5.5H-1a3.5 3.5 0 000 7h2a1.5 1.5 0 010 3H-4.5v2H1a3.5 3.5 0 000-7H-1a1.5 1.5 0 010-3H4.5z" fill="#fff"/>
+    </g>
+    <!-- ChevronRight icon path (MD3 style) centered at 0,0 12x12 viewbox -->
+    <g id="chevron">
+      <polyline points="-3,-5 3,0 -3,5" fill="none" stroke="#BDBDBD" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- MoreVert 3-dot vertical icon -->
+    <g id="more">
+      <circle cx="0" cy="-7" r="1.6" fill="#757575"/>
+      <circle cx="0" cy="0"  r="1.6" fill="#757575"/>
+      <circle cx="0" cy="7"  r="1.6" fill="#757575"/>
+    </g>
+  </defs>
+
+  <!-- ── Phone shell ── -->
+  <rect width="320" height="640" rx="36" fill="#212121"/>
+  <rect x="10" y="10" width="300" height="620" rx="28" fill="#F5F5F5"/>
+
+  <!-- ── Status bar ── -->
+  <text x="28" y="26" font-family="system-ui,sans-serif" font-size="11" font-weight="600" fill="#212121">9:41</text>
+  <!-- signal dots -->
+  <circle cx="258" cy="20" r="2.2" fill="#212121"/><circle cx="265" cy="20" r="2.2" fill="#212121"/><circle cx="272" cy="20" r="2.2" fill="#212121"/>
+  <!-- battery -->
+  <rect x="276" y="16" width="18" height="10" rx="2" fill="none" stroke="#212121" stroke-width="1.2"/>
+  <rect x="294" y="18.5" width="2.5" height="5" rx="1" fill="#212121"/>
+  <rect x="277.5" y="17.5" width="10" height="7" rx="1" fill="#212121"/>
+
+  <!-- ── CenterAlignedTopAppBar (white surface) ── -->
+  <rect x="10" y="34" width="300" height="56" fill="#FFFFFF"/>
+  <!-- Logo circle bg -->
+  <circle cx="125" cy="62" r="18" fill="#C8E6C9"/>
+  <!-- Logo coin -->
+  <use href="#logo" transform="translate(125,62)"/>
+  <!-- "Splinge" label -->
+  <text x="150" y="67" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#212121" dominant-baseline="middle" dy="0">Splinge</text>
+  <!-- MoreVert -->
+  <use href="#more" transform="translate(289,62)"/>
+
+  <!-- top bar bottom edge -->
+  <line x1="10" y1="90" x2="310" y2="90" stroke="#E0E0E0" stroke-width="0.6"/>
+
+  <!-- ── Group card 1 ── shape=large rx=20, OutlinedCard -->
+  <rect x="20" y="102" width="280" height="80" rx="20" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.2" filter="url(#s)"/>
+  <circle cx="64" cy="142" r="22" fill="#B2DFDB"/>
+  <!-- initial letter, truly centred -->
+  <text x="64" y="142" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#004D40" text-anchor="middle" dominant-baseline="central">S</text>
+  <text x="96" y="136" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#212121" dominant-baseline="auto">Summer Trip 2025</text>
+  <text x="96" y="154" font-family="system-ui,sans-serif" font-size="12" fill="#616161" dominant-baseline="auto">4 members • €</text>
+  <use href="#chevron" transform="translate(285,142)"/>
+
+  <!-- ── Group card 2 ── -->
+  <rect x="20" y="194" width="280" height="80" rx="20" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.2" filter="url(#s)"/>
+  <circle cx="64" cy="234" r="22" fill="#B2DFDB"/>
+  <text x="64" y="234" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#004D40" text-anchor="middle" dominant-baseline="central">F</text>
+  <text x="96" y="228" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#212121">Flatmates</text>
+  <text x="96" y="246" font-family="system-ui,sans-serif" font-size="12" fill="#616161" dominant-baseline="auto">3 members • €</text>
+  <use href="#chevron" transform="translate(285,234)"/>
+
+  <!-- ── Group card 3 ── -->
+  <rect x="20" y="286" width="280" height="80" rx="20" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.2" filter="url(#s)"/>
+  <circle cx="64" cy="326" r="22" fill="#B2DFDB"/>
+  <text x="64" y="326" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#004D40" text-anchor="middle" dominant-baseline="central">B</text>
+  <text x="96" y="320" font-family="system-ui,sans-serif" font-size="15" font-weight="700" fill="#212121">Barcelona Trip</text>
+  <text x="96" y="338" font-family="system-ui,sans-serif" font-size="12" fill="#616161" dominant-baseline="auto">2 members • $</text>
+  <use href="#chevron" transform="translate(285,326)"/>
+
+  <!-- ── ExtendedFAB "New Group" bottom-right ── -->
+  <rect x="163" y="556" width="127" height="48" rx="24" fill="#4CAF50" filter="url(#f)"/>
+  <!-- + icon path -->
+  <line x1="183" y1="580" x2="183" y2="580" stroke="#fff" stroke-width="0"/>
+  <text x="183" y="584" font-family="system-ui,sans-serif" font-size="22" font-weight="300" fill="#FFFFFF" text-anchor="middle" dominant-baseline="middle">+</text>
+  <text x="212" y="580" font-family="system-ui,sans-serif" font-size="14" font-weight="600" fill="#FFFFFF" dominant-baseline="middle">New Group</text>
+
+  <!-- ── Home indicator ── -->
+  <rect x="120" y="621" width="80" height="4" rx="2" fill="#000" opacity="0.16"/>
+</svg>
+

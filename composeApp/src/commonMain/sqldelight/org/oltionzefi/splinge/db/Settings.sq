@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS SettingsEntity (
+    id INTEGER NOT NULL PRIMARY KEY DEFAULT 1,
+    userName TEXT NOT NULL DEFAULT '',
+    paypalMe TEXT NOT NULL DEFAULT ''
+);
+
+upsertSettings:
+INSERT OR REPLACE INTO SettingsEntity(id, userName, paypalMe)
+VALUES (1, ?, ?);
+
+selectSettings:
+SELECT * FROM SettingsEntity WHERE id = 1;
+

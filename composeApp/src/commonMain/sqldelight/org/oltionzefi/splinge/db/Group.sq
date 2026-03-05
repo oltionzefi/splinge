@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS GroupEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    algorithmType TEXT NOT NULL DEFAULT 'DEBT_SIMPLIFICATION',
+    currency TEXT NOT NULL DEFAULT '€'
+);
+
+insertGroup:
+INSERT OR REPLACE INTO GroupEntity(id, name, algorithmType, currency)
+VALUES (?, ?, ?, ?);
+
+selectAllGroups:
+SELECT * FROM GroupEntity ORDER BY rowid ASC;
+
+selectGroupById:
+SELECT * FROM GroupEntity WHERE id = ?;
+
+deleteGroup:
+DELETE FROM GroupEntity WHERE id = ?;
+
+deleteAllGroups:
+DELETE FROM GroupEntity;
+
+updateGroup:
+UPDATE GroupEntity SET name = ?, algorithmType = ?, currency = ? WHERE id = ?;
+

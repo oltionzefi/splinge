@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS SplitEntity (
+    expenseId TEXT NOT NULL,
+    groupId TEXT NOT NULL,
+    memberId TEXT NOT NULL,
+    amount REAL NOT NULL,
+    PRIMARY KEY (expenseId, groupId, memberId),
+    FOREIGN KEY (expenseId, groupId) REFERENCES ExpenseEntity(id, groupId) ON DELETE CASCADE
+);
+
+insertSplit:
+INSERT OR REPLACE INTO SplitEntity(expenseId, groupId, memberId, amount)
+VALUES (?, ?, ?, ?);
+
+selectSplitsByExpense:
+SELECT * FROM SplitEntity WHERE expenseId = ? AND groupId = ?;
+
+deleteSplitsByGroup:
+DELETE FROM SplitEntity WHERE groupId = ?;
+

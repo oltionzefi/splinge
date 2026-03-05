@@ -1,0 +1,42 @@
+### Build artifacts ###
+*.iml
+.kotlin
+.gradle
+**/build/
+!src/**/build/
+
+### Local configuration (never commit these) ###
+local.properties
+*.keystore
+*.jks
+*.p12
+*.env
+google-services.json
+GoogleService-Info.plist
+
+### IDE ###
+.idea
+*.iws
+*.ipr
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Android ###
+captures
+.externalNativeBuild
+.cxx
+
+### iOS / Xcode ###
+xcuserdata
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+*.xcuserstate
+
+### Node (for tooling) ###
+node_modules/

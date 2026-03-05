@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS MemberEntity (
+    id TEXT NOT NULL,
+    groupId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    paypalMe TEXT,
+    PRIMARY KEY (id, groupId),
+    FOREIGN KEY (groupId) REFERENCES GroupEntity(id) ON DELETE CASCADE
+);
+
+insertMember:
+INSERT OR REPLACE INTO MemberEntity(id, groupId, name, paypalMe)
+VALUES (?, ?, ?, ?);
+
+selectMembersByGroup:
+SELECT * FROM MemberEntity WHERE groupId = ? ORDER BY rowid ASC;
+
+deleteMembersByGroup:
+DELETE FROM MemberEntity WHERE groupId = ?;
+
