@@ -9,6 +9,7 @@ sealed class Screen {
     object CreateGroup : Screen()
     data class GroupDetail(val groupId: String) : Screen()
     data class AddExpense(val groupId: String) : Screen()
+    data class EditExpense(val groupId: String, val expenseId: String) : Screen()
     data class AddMember(val groupId: String) : Screen()
     data class GroupSettings(val groupId: String) : Screen()
 }

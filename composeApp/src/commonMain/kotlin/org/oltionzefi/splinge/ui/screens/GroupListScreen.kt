@@ -106,9 +106,9 @@ fun GroupListScreen(
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(20.dp))
+                                                Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
                                                 Spacer(Modifier.width(12.dp))
-                                                Text("My PayPal (Scan Me)", style = MaterialTheme.typography.bodyLarge)
+                                                Text("Share My PayPal", style = MaterialTheme.typography.bodyLarge)
                                             }
                                         }
                                     }

@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,6 +20,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import org.oltionzefi.splinge.logic.SplitCalculator
 import org.oltionzefi.splinge.model.AlgorithmType
+import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
 import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
 
@@ -27,6 +30,7 @@ fun GroupDetailScreen(
     group: Group,
     onBack: () -> Unit,
     onAddExpense: () -> Unit,
+    onEditExpense: (Expense) -> Unit,
     onShare: () -> Unit,
     onAlgorithmChange: (AlgorithmType) -> Unit,
     onCurrencyChange: (String) -> Unit,
@@ -225,7 +229,7 @@ fun GroupDetailScreen(
                             modifier = Modifier.padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
                             Spacer(Modifier.width(16.dp))
                             Column {
                                 Text(
@@ -265,6 +269,7 @@ fun GroupDetailScreen(
                 items(group.expenses.reversed()) { expense ->
                     val payer = group.members.find { it.id == expense.paidById }?.name ?: "Unknown"
                     OutlinedCard(
+                        onClick = { onEditExpense(expense) },
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
@@ -278,7 +283,7 @@ fun GroupDetailScreen(
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.ReceiptLong, contentDescription = null)
+                                    Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null)
                                 }
                             }
                             Spacer(Modifier.width(16.dp))

@@ -104,6 +104,8 @@ class ShareUtilTest {
         val txn = Transaction(from = "B", to = "A", amount = 10.0)
         val report = ShareUtil.generateTransactionReport(baseGroup(), txn)
         assertTrue(report.contains("paypal.me/alice"), "Should include PayPal link for Alice")
+        assertFalse(report.contains("https://"), "Should not include https protocol")
+        assertFalse(report.contains("/10"), "Should not include amount in link")
     }
 
     @Test
@@ -181,7 +183,7 @@ class ShareUtilTest {
     @Test
     fun generateProfilePaypalLink_correctFormat() {
         val link = ShareUtil.generateProfilePaypalLink("alice")
-        assertEquals("https://paypal.me/alice", link)
+        assertEquals("paypal.me/alice", link)
     }
 }
 

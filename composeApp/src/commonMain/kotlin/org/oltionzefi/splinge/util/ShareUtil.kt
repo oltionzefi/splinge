@@ -48,7 +48,7 @@ object ShareUtil {
         
         val paypalMe = group.members.find { it.id == trans.to }?.paypalMe
         if (!paypalMe.isNullOrBlank()) {
-            val link = generatePaypalLink(paypalMe, trans.amount)
+            val link = generatePaypalLink(paypalMe)
             sb.append("\n🚀 Pay here: $link\n")
         }
         sb.append("--------------------------------\n")
@@ -105,13 +105,12 @@ object ShareUtil {
         return "- $fromName owes $toName: ${group.currency}${trans.amount.format(2)}\n"
     }
 
-    private fun generatePaypalLink(username: String, amount: Double): String {
-        // PayPal link format: https://paypal.me/username/amount
-        return "https://paypal.me/$username/${amount.format(2)}"
+    fun generatePaypalLink(username: String): String {
+        return "paypal.me/$username"
     }
     
     fun generateProfilePaypalLink(username: String): String {
-        return "https://paypal.me/$username"
+        return "paypal.me/$username"
     }
 
     // Rounding helper

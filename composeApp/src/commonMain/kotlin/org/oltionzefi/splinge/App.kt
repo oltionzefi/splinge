@@ -17,7 +17,8 @@ import org.oltionzefi.splinge.util.ShareUtil
 
 @Composable
 fun App() {
-    val repository = remember { AppRepository(getDatabaseDriverFactory()) }
+    val platform = getPlatform()
+    val repository = remember { AppRepository(getDatabaseDriverFactory(), platform.ioDispatcher) }
     val scope = rememberCoroutineScope()
 
     SplingeTheme {
@@ -29,7 +30,6 @@ fun App() {
         // Settings are loaded once; mutations are persisted immediately
         var userSettings by remember { mutableStateOf(repository.loadSettings()) }
 
-        val platform = getPlatform()
         var showMaxGroupsAlert by remember { mutableStateOf(false) }
         var showPaypalInputDialog by remember { mutableStateOf(false) }
         var seeded by remember { mutableStateOf(false) }
@@ -51,7 +51,7 @@ fun App() {
                     userSettings = updated
                     showPaypalInputDialog = false
                     scope.launch { repository.saveSettings(updated) }
-                    platform.openUrl(ShareUtil.generateProfilePaypalLink(newLink))
+                    platform.shareText("Pay me on PayPal: ${ShareUtil.generateProfilePaypalLink(newLink)}", "Splinge: My PayPal")
                 }
             )
         }
@@ -99,7 +99,7 @@ fun App() {
                         onSettings = { currentScreen = Screen.GlobalSettings },
                         onOpenPayme = {
                             if (userSettings.paypalMe.isNotBlank()) {
-                                platform.openUrl(ShareUtil.generateProfilePaypalLink(userSettings.paypalMe))
+                                platform.shareText("Pay me on PayPal: ${ShareUtil.generateProfilePaypalLink(userSettings.paypalMe)}", "Splinge: My PayPal")
                             } else {
                                 showPaypalInputDialog = true
                             }
@@ -145,6 +145,7 @@ fun App() {
                             group = group,
                             onBack = { currentScreen = Screen.GroupList },
                             onAddExpense = { currentScreen = Screen.AddExpense(group.id) },
+                            onEditExpense = { expense -> currentScreen = Screen.EditExpense(group.id, expense.id) },
                             onShare = {
                                 val transactions = SplitCalculator.calculateTransactions(group)
                                 val report = ShareUtil.generateReport(group, transactions)
@@ -202,6 +203,37 @@ fun App() {
                                     }
                                     currentScreen = Screen.GroupDetail(group.id)
                                 }
+                            }
+                        )
+                    } else {
+                        currentScreen = Screen.GroupList
+                    }
+                }
+
+                is Screen.EditExpense -> {
+                    val group = groups.find { it.id == screen.groupId }
+                    val expense = group?.expenses?.find { it.id == screen.expenseId }
+                    if (group != null && expense != null) {
+                        AddExpenseScreen(
+                            group = group,
+                            expense = expense,
+                            onBack = { currentScreen = Screen.GroupDetail(group.id) },
+                            onSave = { description, amount, paidBy, paidFor ->
+                                val roundedAmount = ShareUtil.roundToTwoDecimals(amount)
+                                val splitAmount = ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                val updatedExpense = expense.copy(
+                                    description = description,
+                                    amount = roundedAmount,
+                                    paidById = paidBy,
+                                    splits = paidFor.map { Split(it, splitAmount) }
+                                )
+                                val updatedExpenses = group.expenses.map {
+                                    if (it.id == expense.id) updatedExpense else it
+                                }
+                                scope.launch {
+                                    repository.saveGroup(group.copy(expenses = updatedExpenses))
+                                }
+                                currentScreen = Screen.GroupDetail(group.id)
                             }
                         )
                     } else {

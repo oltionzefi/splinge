@@ -9,7 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-03-07
+
 ### Added
+- Expense editing: enabled modifying existing expenses with field prepopulation and persistence.
+- "Share My PayPal" feature: simplified PayPal link format (`paypal.me/username`) and added system share sheet integration.
 - `navigation/Screen.kt` — `Screen` sealed class extracted from `App.kt` into its own package for clear separation of navigation concerns.
 - `CONTRIBUTING.md` — contributor guide covering project structure, code style, and workflow.
 - `CODE_OF_CONDUCT.md` — Contributor Covenant 2.1.
@@ -17,10 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `CHANGELOG.md` — this file.
 
 ### Changed
+- Refactored `AppRepository` and `Platform` to use platform-specific `ioDispatcher`, resolving compilation issues in Kotlin Multiplatform.
+- Migrated deprecated icons (`ArrowForward`, `ReceiptLong`) to `AutoMirrored` versions in `GroupDetailScreen.kt`.
 - `App.kt` refactored: duplicate screen composables removed; file now only contains `App()` and delegates to `ui/screens/`.
 - `.gitignore` expanded with keystore files, environment files, and OS-specific entries.
 
 ### Removed
+- PayPal "Scan Me" functionality, replaced by the new share feature.
 - `Greeting.kt` — unused scaffold boilerplate deleted.
 
 ---

@@ -1,10 +1,13 @@
 package org.oltionzefi.splinge
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import platform.UIKit.UIDevice
 import org.oltionzefi.splinge.db.DatabaseDriverFactory
 
 class IOSPlatform : Platform {
     override val name: String = UIDevice.currentDevice.systemName() + " " + UIDevice.currentDevice.systemVersion
+    override val ioDispatcher: CoroutineDispatcher = Dispatchers.Default
 
     override fun shareText(text: String, title: String) {
         // Sharing requires a UIViewController context; implement via MainViewController if needed.

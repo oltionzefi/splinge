@@ -13,24 +13,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddExpenseScreen(
     group: Group,
+    expense: Expense? = null,
     onBack: () -> Unit,
     onSave: (String, Double, String, List<String>) -> Unit
 ) {
-    var description by remember { mutableStateOf("") }
-    var amountText by remember { mutableStateOf("") }
-    var paidById by remember { mutableStateOf(group.members.firstOrNull()?.id ?: "") }
-    val paidForIds = remember { mutableStateListOf<String>().apply { addAll(group.members.map { it.id }) } }
+    var description by remember { mutableStateOf(expense?.description ?: "") }
+    var amountText by remember { mutableStateOf(expense?.amount?.toString() ?: "") }
+    var paidById by remember { mutableStateOf(expense?.paidById ?: group.members.firstOrNull()?.id ?: "") }
+    val paidForIds = remember {
+        mutableStateListOf<String>().apply {
+            if (expense != null) {
+                addAll(expense.splits.map { it.memberId })
+            } else {
+                addAll(group.members.map { it.id })
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add Expense", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                title = { Text(if (expense == null) "Add Expense" else "Edit Expense", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -112,7 +122,7 @@ fun AddExpenseScreen(
                     shape = MaterialTheme.shapes.medium,
                     enabled = description.isNotBlank() && (amountText.toDoubleOrNull() ?: 0.0) > 0 && paidForIds.isNotEmpty()
                 ) {
-                    Text("Save Expense", style = MaterialTheme.typography.titleMedium)
+                    Text(if (expense == null) "Save Expense" else "Update Expense", style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

@@ -1,7 +1,7 @@
 package org.oltionzefi.splinge.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -70,7 +70,7 @@ fun PaypalInputDialog(
             Column(modifier = Modifier.padding(24.dp)) {
                 Text(text = "PayPal Link", style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Please enter your PayPal link (e.g., yourname) to open your 'Scan Me' page.", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "Please enter your PayPal username (e.g., yourname) to share your payment link.", style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(16.dp))
                 OutlinedTextField(
                     value = text,
@@ -105,9 +105,9 @@ fun PaypalInputDialog(
                         },
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                     ) {
-                        Icon(androidx.compose.material.icons.Icons.Default.QrCodeScanner, contentDescription = null)
+                        Icon(androidx.compose.material.icons.Icons.Default.Share, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Save & Open")
+                        Text("Save & Share")
                     }
                 }
             }

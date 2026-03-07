@@ -2,7 +2,7 @@ package org.oltionzefi.splinge.db
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -12,7 +12,7 @@ import org.oltionzefi.splinge.model.*
  * Single source of truth for all persistent app data.
  * All reads are reactive (Flow); all writes are suspending functions.
  */
-class AppRepository(driverFactory: DatabaseDriverFactory) {
+class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatcher: CoroutineDispatcher) {
 
     private val database = SplingeDatabase(driverFactory.createDriver())
     private val groupQ = database.groupQueries
@@ -25,7 +25,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory) {
 
     /** Emits the full list of [Group]s whenever the DB changes. */
     val groups: Flow<List<Group>> =
-        groupQ.selectAllGroups().asFlow().mapToList(Dispatchers.IO).map { rows ->
+        groupQ.selectAllGroups().asFlow().mapToList(ioDispatcher).map { rows ->
             rows.map { row ->
                 val members = memberQ.selectMembersByGroup(row.id).executeAsList().map { m ->
                     Member(id = m.id, name = m.name, paypalMe = m.paypalMe)
@@ -54,7 +54,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory) {
             }
         }
 
-    suspend fun saveGroup(group: Group) = withContext(Dispatchers.IO) {
+    suspend fun saveGroup(group: Group) = withContext(ioDispatcher) {
         database.transaction {
             groupQ.insertGroup(group.id, group.name, group.algorithmType.name, group.currency)
             memberQ.deleteMembersByGroup(group.id)
@@ -72,7 +72,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory) {
         }
     }
 
-    suspend fun deleteGroup(groupId: String) = withContext(Dispatchers.IO) {
+    suspend fun deleteGroup(groupId: String) = withContext(ioDispatcher) {
         database.transaction {
             splitQ.deleteSplitsByGroup(groupId)
             expenseQ.deleteExpensesByGroup(groupId)
@@ -89,7 +89,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory) {
         else UserSettings()
     }
 
-    suspend fun saveSettings(settings: UserSettings) = withContext(Dispatchers.IO) {
+    suspend fun saveSettings(settings: UserSettings) = withContext(ioDispatcher) {
         settingsQ.upsertSettings(settings.name, settings.paypalMe)
     }
 }

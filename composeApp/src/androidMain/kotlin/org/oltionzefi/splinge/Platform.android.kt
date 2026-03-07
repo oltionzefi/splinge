@@ -7,10 +7,13 @@ import android.content.Context
 import android.net.Uri
 import android.content.ActivityNotFoundException
 import androidx.core.net.toUri
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import org.oltionzefi.splinge.db.DatabaseDriverFactory
 
 class AndroidPlatform(private val context: Context) : Platform {
     override val name: String = "Android ${Build.VERSION.SDK_INT}"
+    override val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     override fun shareText(text: String, title: String) {
         val intent = Intent(Intent.ACTION_SEND).apply {
