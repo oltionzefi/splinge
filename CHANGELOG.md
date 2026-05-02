@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-05-02
+
+### Added
+- `AGENTS.md` and `CLAUDE.md`: Comprehensive guidelines and documentation for AI agents.
+- `BackHandler`: Multiplatform component for handling system back events.
+- Grouped view in `GroupDetailScreen` and reports: Balances are now grouped by creditor for better clarity.
+
+### Changed
+- Improved `App.kt` stability: Resolved race conditions during seeding and settings loading.
+- Enhanced currency formatting: Global use of `ShareUtil.Double.format` for consistent 2-decimal rounding.
+- UI Refinement: Moved "Delete Expense" button to the top app bar for better visibility.
+- Robust ID generation: Switched to `max(id) + 1` pattern to prevent database collisions.
+
+### Fixed
+- Reappearing sample data: Fixed logic ensuring sample groups don't return after being deleted.
+- Database safety: Added `try-catch` blocks to all `AppRepository` operations to prevent crashes on schema mismatches.
+
 ## [1.1.0] - 2026-03-07
 
 ### Added

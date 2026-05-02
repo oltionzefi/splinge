@@ -15,6 +15,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
+import org.oltionzefi.splinge.util.ShareUtil.format
+import org.oltionzefi.splinge.util.ShareUtil.roundToTwoDecimals
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,10 +24,11 @@ fun AddExpenseScreen(
     group: Group,
     expense: Expense? = null,
     onBack: () -> Unit,
+    onDelete: (() -> Unit)? = null,
     onSave: (String, Double, String, List<String>) -> Unit
 ) {
     var description by remember { mutableStateOf(expense?.description ?: "") }
-    var amountText by remember { mutableStateOf(expense?.amount?.toString() ?: "") }
+    var amountText by remember { mutableStateOf(expense?.amount?.format(2) ?: "") }
     var paidById by remember { mutableStateOf(expense?.paidById ?: group.members.firstOrNull()?.id ?: "") }
     val paidForIds = remember {
         mutableStateListOf<String>().apply {
@@ -44,6 +47,17 @@ fun AddExpenseScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (expense != null && onDelete != null) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete Expense",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
@@ -113,14 +127,14 @@ fun AddExpenseScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
                     onClick = {
-                        val amount = amountText.toDoubleOrNull() ?: 0.0
-                        if (description.isNotBlank() && amount > 0 && paidForIds.isNotEmpty()) {
+                        val amount = roundToTwoDecimals(amountText.toDoubleOrNull() ?: 0.0)
+                        if (description.isNotBlank() && amount >= 0 && paidForIds.isNotEmpty()) {
                             onSave(description, amount, paidById, paidForIds.toList())
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = MaterialTheme.shapes.medium,
-                    enabled = description.isNotBlank() && (amountText.toDoubleOrNull() ?: 0.0) > 0 && paidForIds.isNotEmpty()
+                    enabled = description.isNotBlank() && (amountText.toDoubleOrNull() ?: 0.0) >= 0 && paidForIds.isNotEmpty()
                 ) {
                     Text(if (expense == null) "Save Expense" else "Update Expense", style = MaterialTheme.typography.titleMedium)
                 }

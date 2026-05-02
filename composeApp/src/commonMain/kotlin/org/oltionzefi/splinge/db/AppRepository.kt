@@ -22,35 +22,48 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
     private val settingsQ = database.settingsQueries
 
     // ── Groups ────────────────────────────────────────────────────────────────
+    
+    private fun safeAlgorithmType(value: String): AlgorithmType {
+        return try {
+            AlgorithmType.valueOf(value)
+        } catch (e: Exception) {
+            AlgorithmType.DEBT_SIMPLIFICATION
+        }
+    }
 
     /** Emits the full list of [Group]s whenever the DB changes. */
     val groups: Flow<List<Group>> =
         groupQ.selectAllGroups().asFlow().mapToList(ioDispatcher).map { rows ->
-            rows.map { row ->
-                val members = memberQ.selectMembersByGroup(row.id).executeAsList().map { m ->
-                    Member(id = m.id, name = m.name, paypalMe = m.paypalMe)
-                }
-                val expenses = expenseQ.selectExpensesByGroup(row.id).executeAsList().map { e ->
-                    val splits = splitQ.selectSplitsByExpense(e.id, e.groupId).executeAsList().map { s ->
-                        Split(memberId = s.memberId, amount = s.amount)
+            try {
+                rows.map { row ->
+                    val members = memberQ.selectMembersByGroup(row.id).executeAsList().map { m ->
+                        Member(id = m.id, name = m.name, paypalMe = m.paypalMe)
                     }
-                    Expense(
-                        id = e.id,
-                        description = e.description,
-                        amount = e.amount,
-                        paidById = e.paidById,
-                        splits = splits,
-                        date = e.date
+                    val expenses = expenseQ.selectExpensesByGroup(row.id).executeAsList().map { e ->
+                        val splits = splitQ.selectSplitsByExpense(e.id, e.groupId).executeAsList().map { s ->
+                            Split(memberId = s.memberId, amount = s.amount)
+                        }
+                        Expense(
+                            id = e.id,
+                            description = e.description,
+                            amount = e.amount,
+                            paidById = e.paidById,
+                            splits = splits,
+                            date = e.date
+                        )
+                    }
+                    Group(
+                        id = row.id,
+                        name = row.name,
+                        members = members,
+                        expenses = expenses,
+                        algorithmType = safeAlgorithmType(row.algorithmType),
+                        currency = row.currency
                     )
                 }
-                Group(
-                    id = row.id,
-                    name = row.name,
-                    members = members,
-                    expenses = expenses,
-                    algorithmType = AlgorithmType.valueOf(row.algorithmType),
-                    currency = row.currency
-                )
+            } catch (e: Exception) {
+                // If anything fails during mapping (e.g. missing columns), return empty list
+                emptyList()
             }
         }
 
@@ -84,12 +97,32 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
     // ── Settings ──────────────────────────────────────────────────────────────
 
     fun loadSettings(): UserSettings {
-        val row = settingsQ.selectSettings().executeAsOneOrNull()
-        return if (row != null) UserSettings(name = row.userName, paypalMe = row.paypalMe)
-        else UserSettings()
+        return try {
+            val row = settingsQ.selectSettings().executeAsOneOrNull()
+            if (row != null) {
+                UserSettings(
+                    name = row.userName,
+                    paypalMe = row.paypalMe,
+                    isSeeded = row.isSeeded == 1L
+                )
+            } else {
+                UserSettings()
+            }
+        } catch (e: Exception) {
+            // This might happen if the table schema changed but was not migrated
+            UserSettings()
+        }
     }
 
     suspend fun saveSettings(settings: UserSettings) = withContext(ioDispatcher) {
-        settingsQ.upsertSettings(settings.name, settings.paypalMe)
+        try {
+            settingsQ.upsertSettings(
+                userName = settings.name,
+                paypalMe = settings.paypalMe,
+                isSeeded = if (settings.isSeeded) 1L else 0L
+            )
+        } catch (e: Exception) {
+            // Ignore failure to save settings if DB schema is incompatible
+        }
     }
 }

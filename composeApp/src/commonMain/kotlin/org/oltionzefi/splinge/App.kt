@@ -11,6 +11,7 @@ import org.oltionzefi.splinge.model.*
 import org.oltionzefi.splinge.navigation.Screen
 import org.oltionzefi.splinge.ui.components.PaypalInputDialog
 import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
+import org.oltionzefi.splinge.ui.components.BackHandler
 import org.oltionzefi.splinge.ui.screens.*
 import org.oltionzefi.splinge.ui.theme.SplingeTheme
 import org.oltionzefi.splinge.util.ShareUtil
@@ -24,15 +25,43 @@ fun App() {
     SplingeTheme {
         var currentScreen by remember { mutableStateOf<Screen>(Screen.GroupList) }
 
+        BackHandler(enabled = currentScreen != Screen.GroupList) {
+            currentScreen = when (val screen = currentScreen) {
+                is Screen.GroupDetail -> Screen.GroupList
+                is Screen.AddExpense -> Screen.GroupDetail(screen.groupId)
+                is Screen.EditExpense -> Screen.GroupDetail(screen.groupId)
+                is Screen.AddMember -> Screen.GroupDetail(screen.groupId)
+                is Screen.GroupSettings -> Screen.GroupDetail(screen.groupId)
+                is Screen.CreateGroup -> Screen.GroupList
+                is Screen.GlobalSettings -> Screen.GroupList
+                Screen.GroupList -> Screen.GroupList
+            }
+        }
+
         // Collect the live group list from the database
-        val groups by repository.groups.collectAsState(initial = emptyList())
+        val groupsFlow = remember { repository.groups }
+        val groupsState by groupsFlow.collectAsState(initial = null)
+        val groups = groupsState ?: emptyList()
 
         // Settings are loaded once; mutations are persisted immediately
-        var userSettings by remember { mutableStateOf(repository.loadSettings()) }
+        var userSettings by remember {
+            mutableStateOf<UserSettings?>(null)
+        }
+
+        // Load settings asynchronously
+        LaunchedEffect(Unit) {
+            val settings = try {
+                repository.loadSettings()
+            } catch (e: Exception) {
+                UserSettings()
+            }
+            userSettings = settings
+        }
+
+        val settings = userSettings ?: UserSettings()
 
         var showMaxGroupsAlert by remember { mutableStateOf(false) }
         var showPaypalInputDialog by remember { mutableStateOf(false) }
-        var seeded by remember { mutableStateOf(false) }
 
         if (showMaxGroupsAlert) {
             SimpleAlertDialog(
@@ -42,12 +71,13 @@ fun App() {
             )
         }
 
-        if (showPaypalInputDialog) {
+        if (showPaypalInputDialog && userSettings != null) {
+            val currentPaypalSettings = userSettings!!
             PaypalInputDialog(
-                initialValue = userSettings.paypalMe,
+                initialValue = currentPaypalSettings.paypalMe,
                 onDismissRequest = { showPaypalInputDialog = false },
                 onSave = { newLink ->
-                    val updated = userSettings.copy(paypalMe = newLink)
+                    val updated = currentPaypalSettings.copy(paypalMe = newLink)
                     userSettings = updated
                     showPaypalInputDialog = false
                     scope.launch { repository.saveSettings(updated) }
@@ -57,32 +87,39 @@ fun App() {
         }
 
         // Seed sample data only when the DB is empty on first ever launch
-        LaunchedEffect(groups) {
-            if (!seeded && groups.isEmpty()) {
-                seeded = true
-                val members = listOf(
-                    Member("1", "Alice", "alice"),
-                    Member("2", "Bob", "bob"),
-                    Member("3", "Charlie")
-                )
-                val expenseAmount = 60.0
-                val splitAmount = ShareUtil.roundToTwoDecimals(expenseAmount / members.size)
-                repository.saveGroup(
-                    Group(
-                        id = "1",
-                        name = "Trip to Paris",
-                        members = members,
-                        expenses = listOf(
-                            Expense(
-                                id = "1",
-                                description = "Dinner",
-                                amount = expenseAmount,
-                                paidById = "1",
-                                splits = members.map { Split(it.id, splitAmount) }
+        LaunchedEffect(userSettings, groupsState) {
+            val currentSettings = userSettings ?: return@LaunchedEffect
+            val currentGroups = groupsState ?: return@LaunchedEffect
+
+            if (!currentSettings.isSeeded) {
+                if (currentGroups.isEmpty()) {
+                    val members = listOf(
+                        Member("1", "Alice", "alice"),
+                        Member("2", "Bob", "bob"),
+                        Member("3", "Charlie")
+                    )
+                    val expenseAmount = 60.0
+                    val splitAmount = ShareUtil.roundToTwoDecimals(expenseAmount / members.size)
+                    repository.saveGroup(
+                        Group(
+                            id = "1",
+                            name = "Trip to Paris",
+                            members = members,
+                            expenses = listOf(
+                                Expense(
+                                    id = "1",
+                                    description = "Dinner",
+                                    amount = expenseAmount,
+                                    paidById = "1",
+                                    splits = members.map { Split(it.id, splitAmount) }
+                                )
                             )
                         )
                     )
-                )
+                }
+                val updatedSettings = currentSettings.copy(isSeeded = true)
+                userSettings = updatedSettings
+                repository.saveSettings(updatedSettings)
             }
         }
 
@@ -98,8 +135,9 @@ fun App() {
                         },
                         onSettings = { currentScreen = Screen.GlobalSettings },
                         onOpenPayme = {
-                            if (userSettings.paypalMe.isNotBlank()) {
-                                platform.shareText("Pay me on PayPal: ${ShareUtil.generateProfilePaypalLink(userSettings.paypalMe)}", "Splinge: My PayPal")
+                            val currentListSettings = userSettings
+                            if (currentListSettings != null && currentListSettings.paypalMe.isNotBlank()) {
+                                platform.shareText("Pay me on PayPal: ${ShareUtil.generateProfilePaypalLink(currentListSettings.paypalMe)}", "Splinge: My PayPal")
                             } else {
                                 showPaypalInputDialog = true
                             }
@@ -108,8 +146,9 @@ fun App() {
                 }
 
                 is Screen.GlobalSettings -> {
+                    val currentGlobalSettings = userSettings ?: UserSettings()
                     GlobalSettingsScreen(
-                        settings = userSettings,
+                        settings = currentGlobalSettings,
                         onBack = { currentScreen = Screen.GroupList },
                         onSave = { updated ->
                             userSettings = updated
@@ -119,16 +158,21 @@ fun App() {
                 }
 
                 is Screen.CreateGroup -> {
+                    val currentCreateSettings = userSettings ?: UserSettings()
                     CreateGroupScreen(
-                        userSettings = userSettings,
+                        userSettings = currentCreateSettings,
                         onBack = { currentScreen = Screen.GroupList },
                         onSave = { groupName, addMe ->
                             val members = mutableListOf<Member>()
-                            if (addMe && userSettings.name.isNotBlank()) {
-                                members.add(Member("me", userSettings.name, userSettings.paypalMe))
+                            if (addMe && currentCreateSettings.name.isNotBlank()) {
+                                members.add(Member("me", currentCreateSettings.name, currentCreateSettings.paypalMe))
+                            }
+                            val newGroupId = if (groups.isEmpty()) "1" else {
+                                val maxId = groups.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0
+                                (maxId + 1).toString()
                             }
                             val newGroup = Group(
-                                id = (groups.size + 1).toString(),
+                                id = newGroupId,
                                 name = groupName,
                                 members = members
                             )
@@ -194,8 +238,9 @@ fun App() {
                             onBack = { currentScreen = Screen.GroupDetail(group.id) },
                             onSave = { name ->
                                 if (group.members.size < 10) {
+                                    val maxId = group.members.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0
                                     val newMember = Member(
-                                        id = (group.members.size + 1).toString(),
+                                        id = (maxId + 1).toString(),
                                         name = name
                                     )
                                     scope.launch {
@@ -218,14 +263,34 @@ fun App() {
                             group = group,
                             expense = expense,
                             onBack = { currentScreen = Screen.GroupDetail(group.id) },
+                            onDelete = {
+                                val updatedExpenses = group.expenses.filter { it.id != expense.id }
+                                scope.launch {
+                                    repository.saveGroup(group.copy(expenses = updatedExpenses))
+                                }
+                                currentScreen = Screen.GroupDetail(group.id)
+                            },
                             onSave = { description, amount, paidBy, paidFor ->
                                 val roundedAmount = ShareUtil.roundToTwoDecimals(amount)
-                                val splitAmount = ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                val splitAmount = if (paidFor.isNotEmpty()) {
+                                    ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                } else 0.0
+                                
+                                // Adjust the last split to avoid rounding errors
+                                val splits = paidFor.mapIndexed { index, memberId ->
+                                    if (index == paidFor.size - 1) {
+                                        val totalOtherSplits = splitAmount * (paidFor.size - 1)
+                                        Split(memberId, ShareUtil.roundToTwoDecimals(roundedAmount - totalOtherSplits))
+                                    } else {
+                                        Split(memberId, splitAmount)
+                                    }
+                                }
+
                                 val updatedExpense = expense.copy(
                                     description = description,
                                     amount = roundedAmount,
                                     paidById = paidBy,
-                                    splits = paidFor.map { Split(it, splitAmount) }
+                                    splits = splits
                                 )
                                 val updatedExpenses = group.expenses.map {
                                     if (it.id == expense.id) updatedExpense else it
@@ -249,13 +314,27 @@ fun App() {
                             onBack = { currentScreen = Screen.GroupDetail(group.id) },
                             onSave = { description, amount, paidBy, paidFor ->
                                 val roundedAmount = ShareUtil.roundToTwoDecimals(amount)
-                                val splitAmount = ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                val splitAmount = if (paidFor.isNotEmpty()) {
+                                    ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                } else 0.0
+
+                                // Adjust the last split to avoid rounding errors
+                                val splits = paidFor.mapIndexed { index, memberId ->
+                                    if (index == paidFor.size - 1) {
+                                        val totalOtherSplits = splitAmount * (paidFor.size - 1)
+                                        Split(memberId, ShareUtil.roundToTwoDecimals(roundedAmount - totalOtherSplits))
+                                    } else {
+                                        Split(memberId, splitAmount)
+                                    }
+                                }
+
+                                val maxId = group.expenses.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0
                                 val newExpense = Expense(
-                                    id = (group.expenses.size + 1).toString(),
+                                    id = (maxId + 1).toString(),
                                     description = description,
                                     amount = roundedAmount,
                                     paidById = paidBy,
-                                    splits = paidFor.map { Split(it, splitAmount) }
+                                    splits = splits
                                 )
                                 scope.launch {
                                     repository.saveGroup(group.copy(expenses = group.expenses + newExpense))

@@ -50,5 +50,6 @@ data class Transaction(
 @Serializable
 data class UserSettings(
     val name: String = "",
-    val paypalMe: String = ""
+    val paypalMe: String = "",
+    val isSeeded: Boolean = false
 )

@@ -55,15 +55,15 @@ class ShareUtilTest {
     }
 
     @Test
-    fun generateReport_withTransactions_listsDebtors() {
+    fun generateReport_withTransactions_listsDebtorsGrouped() {
         val txns = listOf(
             Transaction(from = "B", to = "A", amount = 15.0),
             Transaction(from = "C", to = "A", amount = 10.0)
         )
         val report = ShareUtil.generateReport(baseGroup(), txns)
-        assertTrue(report.contains("Bob"), "Should contain debtor name")
-        assertTrue(report.contains("Alice"), "Should contain creditor name")
-        assertTrue(report.contains("Carol"))
+        assertTrue(report.contains("Alice is owed €25.00"), "Should show total owed to Alice")
+        assertTrue(report.contains("- Bob owes €15.00"), "Should show individual debt from Bob")
+        assertTrue(report.contains("- Carol owes €10.00"), "Should show individual debt from Carol")
     }
 
     @Test

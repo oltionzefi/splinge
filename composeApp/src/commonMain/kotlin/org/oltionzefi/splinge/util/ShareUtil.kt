@@ -13,8 +13,15 @@ object ShareUtil {
         if (transactions.isEmpty()) {
             sb.append("All settled up! 🎉\n")
         } else {
-            transactions.forEach { trans ->
-                sb.append(generateTransactionReportLine(group, trans))
+            val grouped = transactions.groupBy { it.to }
+            grouped.forEach { (toMemberId, txs) ->
+                val toName = group.members.find { it.id == toMemberId }?.name ?: toMemberId
+                val totalOwed = txs.sumOf { it.amount }
+                sb.append("👤 $toName is owed ${group.currency}${totalOwed.format(2)}\n")
+                txs.forEach { trans ->
+                    val fromName = group.members.find { it.id == trans.from }?.name ?: trans.from
+                    sb.append("  - $fromName owes ${group.currency}${trans.amount.format(2)}\n")
+                }
             }
         }
         sb.append("\n")
@@ -98,12 +105,6 @@ object ShareUtil {
         return sb.toString()
     }
 
-    private fun generateTransactionReportLine(group: Group, trans: Transaction): String {
-        val fromName = group.members.find { it.id == trans.from }?.name ?: trans.from
-        val toName = group.members.find { it.id == trans.to }?.name ?: trans.to
-        
-        return "- $fromName owes $toName: ${group.currency}${trans.amount.format(2)}\n"
-    }
 
     fun generatePaypalLink(username: String): String {
         return "paypal.me/$username"
@@ -120,7 +121,12 @@ object ShareUtil {
     }
 
     // Simple format extension (Multiplatform-safe enough for this)
-    private fun Double.format(digits: Int): String {
-        return roundToTwoDecimals(this).toString()
+    fun Double.format(digits: Int): String {
+        val rounded = roundToTwoDecimals(this)
+        val s = rounded.toString()
+        if (!s.contains(".")) return "$s.00"
+        val parts = s.split(".")
+        val decimal = parts[1].padEnd(digits, '0').take(digits)
+        return "${parts[0]}.$decimal"
     }
 }

@@ -22,6 +22,7 @@ import org.oltionzefi.splinge.logic.SplitCalculator
 import org.oltionzefi.splinge.model.AlgorithmType
 import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
+import org.oltionzefi.splinge.util.ShareUtil.format
 import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,6 +40,7 @@ fun GroupDetailScreen(
     onDelete: () -> Unit
 ) {
     val transactions = remember(group.algorithmType, group.expenses, group.members) { SplitCalculator.calculateTransactions(group) }
+    val groupedTransactions = remember(transactions) { transactions.groupBy { it.to } }
     val netBalances = remember(group.expenses, group.members) { SplitCalculator.calculateNetBalances(group) }
     var showMaxMembersAlert by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
@@ -201,8 +203,8 @@ fun GroupDetailScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(member.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                if (net > 0) "is owed ${group.currency}$net"
-                                else if (net < 0) "owes ${group.currency}${-net}"
+                                if (net > 0) "is owed ${group.currency}${net.format(2)}"
+                                else if (net < 0) "owes ${group.currency}${(-net).format(2)}"
                                 else "is settled up",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (net > 0) Color(0xFF4CAF50) else if (net < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
@@ -217,33 +219,79 @@ fun GroupDetailScreen(
                 item {
                     Text("Balances", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 16.dp))
                 }
-                items(transactions) { tx ->
-                    val fromMember = group.members.find { it.id == tx.from }?.name ?: "Unknown"
-                    val toMember = group.members.find { it.id == tx.to }?.name ?: "Unknown"
-                    Card(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        shape = MaterialTheme.shapes.medium,
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
+
+                groupedTransactions.forEach { (creditorId, txs) ->
+                    val creditorName = group.members.find { it.id == creditorId }?.name ?: "Unknown"
+                    val totalOwedToCreditor = txs.sumOf { it.amount }
+
+                    item(key = "header_$creditorId") {
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            shape = MaterialTheme.shapes.medium,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
-                            Spacer(Modifier.width(16.dp))
-                            Column {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = androidx.compose.foundation.shape.CircleShape,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            creditorName.take(1).uppercase(),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onPrimary
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "$creditorName is owed",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        text = "${group.currency}${totalOwedToCreditor.format(2)}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    items(txs, key = { tx -> "${tx.from}_${tx.to}" }) { tx ->
+                        val fromMember = group.members.find { it.id == tx.from }?.name ?: "Unknown"
+                        Card(
+                            modifier = Modifier.fillMaxWidth().padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            shape = MaterialTheme.shapes.small,
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.2f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.secondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(12.dp))
                                 Text(
-                                    text = buildString {
-                                        append(fromMember)
-                                        append(" owes ")
-                                        append(toMember)
-                                    },
-                                    style = MaterialTheme.typography.bodyLarge
+                                    text = fromMember,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
                                 )
                                 Text(
-                                    "${group.currency}${tx.amount}",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    "${group.currency}${tx.amount.format(2)}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.secondary
                                 )
                             }
@@ -296,7 +344,7 @@ fun GroupDetailScreen(
                                 )
                             }
                             Text(
-                                "${group.currency}${expense.amount}",
+                                "${group.currency}${expense.amount.format(2)}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
