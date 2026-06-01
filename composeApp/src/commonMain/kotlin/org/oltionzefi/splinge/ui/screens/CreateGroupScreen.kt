@@ -11,16 +11,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.oltionzefi.splinge.model.UserSettings
+import org.oltionzefi.splinge.ui.components.NameInputDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateGroupScreen(
     userSettings: UserSettings,
     onBack: () -> Unit,
-    onSave: (String, Boolean) -> Unit
+    onSave: (String, Boolean, String?) -> Unit
 ) {
     var groupName by remember { mutableStateOf("") }
     var addMe by remember { mutableStateOf(userSettings.name.isNotBlank()) }
+    var showNameDialog by remember { mutableStateOf(false) }
+    var newUserName by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -69,24 +72,28 @@ fun CreateGroupScreen(
                                 "Add myself to this group",
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            if (userSettings.name.isBlank()) {
+                            if (userSettings.name.isBlank() && newUserName == null) {
                                 Text(
-                                    "Set your name in App Settings first",
+                                    "Tap to set your name and add yourself",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
                                 Text(
-                                    "As member: ${userSettings.name}",
+                                    "As member: ${newUserName ?: userSettings.name}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
                         Switch(
-                            checked = addMe && userSettings.name.isNotBlank(),
-                            onCheckedChange = { addMe = it },
-                            enabled = userSettings.name.isNotBlank()
+                            checked = addMe,
+                            onCheckedChange = { 
+                                addMe = it 
+                                if (addMe && userSettings.name.isBlank() && newUserName == null) {
+                                    showNameDialog = true
+                                }
+                            }
                         )
                     }
                 }
@@ -95,14 +102,27 @@ fun CreateGroupScreen(
             item {
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
-                    onClick = { if (groupName.isNotBlank()) onSave(groupName, addMe) },
+                    onClick = { if (groupName.isNotBlank()) onSave(groupName, addMe, newUserName) },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = MaterialTheme.shapes.large,
-                    enabled = groupName.isNotBlank()
+                    enabled = groupName.isNotBlank() && (!addMe || userSettings.name.isNotBlank() || newUserName != null)
                 ) {
                     Text("Create Group")
                 }
             }
+        }
+
+        if (showNameDialog) {
+            NameInputDialog(
+                onDismissRequest = { 
+                    showNameDialog = false
+                    if (newUserName == null) addMe = false
+                },
+                onSave = { name ->
+                    newUserName = name
+                    showNameDialog = false
+                }
+            )
         }
     }
 }

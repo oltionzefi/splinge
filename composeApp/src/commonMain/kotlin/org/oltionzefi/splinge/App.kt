@@ -14,7 +14,7 @@ import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
 import org.oltionzefi.splinge.ui.components.BackHandler
 import org.oltionzefi.splinge.ui.screens.*
 import org.oltionzefi.splinge.ui.theme.SplingeTheme
-import org.oltionzefi.splinge.util.ShareUtil
+import org.oltionzefi.splinge.util.*
 
 @Composable
 fun App() {
@@ -99,7 +99,7 @@ fun App() {
                         Member("3", "Charlie")
                     )
                     val expenseAmount = 60.0
-                    val splitAmount = ShareUtil.roundToTwoDecimals(expenseAmount / members.size)
+                    val splitAmount = roundToTwoDecimals(expenseAmount / members.size)
                     repository.saveGroup(
                         Group(
                             id = "1",
@@ -162,10 +162,19 @@ fun App() {
                     CreateGroupScreen(
                         userSettings = currentCreateSettings,
                         onBack = { currentScreen = Screen.GroupList },
-                        onSave = { groupName, addMe ->
+                        onSave = { groupName, addMe, newUserName ->
+                            val finalUserName = newUserName ?: currentCreateSettings.name
+                            
+                            // If a new name was entered during group creation, save it to settings
+                            if (newUserName != null && newUserName.isNotBlank()) {
+                                val updatedSettings = currentCreateSettings.copy(name = newUserName)
+                                userSettings = updatedSettings
+                                scope.launch { repository.saveSettings(updatedSettings) }
+                            }
+
                             val members = mutableListOf<Member>()
-                            if (addMe && currentCreateSettings.name.isNotBlank()) {
-                                members.add(Member("me", currentCreateSettings.name, currentCreateSettings.paypalMe))
+                            if (addMe && finalUserName.isNotBlank()) {
+                                members.add(Member("me", finalUserName, currentCreateSettings.paypalMe))
                             }
                             val newGroupId = if (groups.isEmpty()) "1" else {
                                 val maxId = groups.maxOfOrNull { it.id.toIntOrNull() ?: 0 } ?: 0
@@ -224,6 +233,9 @@ fun App() {
                             },
                             onCurrencyChange = { newCurrency ->
                                 scope.launch { repository.saveGroup(group.copy(currency = newCurrency)) }
+                            },
+                            onMembersUpdate = { updatedMembers ->
+                                scope.launch { repository.saveGroup(group.copy(members = updatedMembers)) }
                             }
                         )
                     } else {
@@ -271,16 +283,16 @@ fun App() {
                                 currentScreen = Screen.GroupDetail(group.id)
                             },
                             onSave = { description, amount, paidBy, paidFor ->
-                                val roundedAmount = ShareUtil.roundToTwoDecimals(amount)
+                                val roundedAmount = roundToTwoDecimals(amount)
                                 val splitAmount = if (paidFor.isNotEmpty()) {
-                                    ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                    roundToTwoDecimals(roundedAmount / paidFor.size)
                                 } else 0.0
                                 
                                 // Adjust the last split to avoid rounding errors
                                 val splits = paidFor.mapIndexed { index, memberId ->
                                     if (index == paidFor.size - 1) {
                                         val totalOtherSplits = splitAmount * (paidFor.size - 1)
-                                        Split(memberId, ShareUtil.roundToTwoDecimals(roundedAmount - totalOtherSplits))
+                                        Split(memberId, roundToTwoDecimals(roundedAmount - totalOtherSplits))
                                     } else {
                                         Split(memberId, splitAmount)
                                     }
@@ -313,16 +325,16 @@ fun App() {
                             group = group,
                             onBack = { currentScreen = Screen.GroupDetail(group.id) },
                             onSave = { description, amount, paidBy, paidFor ->
-                                val roundedAmount = ShareUtil.roundToTwoDecimals(amount)
+                                val roundedAmount = roundToTwoDecimals(amount)
                                 val splitAmount = if (paidFor.isNotEmpty()) {
-                                    ShareUtil.roundToTwoDecimals(roundedAmount / paidFor.size)
+                                    roundToTwoDecimals(roundedAmount / paidFor.size)
                                 } else 0.0
 
                                 // Adjust the last split to avoid rounding errors
                                 val splits = paidFor.mapIndexed { index, memberId ->
                                     if (index == paidFor.size - 1) {
                                         val totalOtherSplits = splitAmount * (paidFor.size - 1)
-                                        Split(memberId, ShareUtil.roundToTwoDecimals(roundedAmount - totalOtherSplits))
+                                        Split(memberId, roundToTwoDecimals(roundedAmount - totalOtherSplits))
                                     } else {
                                         Split(memberId, splitAmount)
                                     }

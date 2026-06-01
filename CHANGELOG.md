@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.3.0] - 2026-06-01
+
+### Added
+- Total spent display in `GroupDetailScreen`: The total amount spent in a group is now visible next to the "Balances" header.
+- Total spent in reports: Shareable group reports now include the total amount spent.
+- Percentage-based splitting: A new "Percentage" algorithm option in group settings allows splitting all expenses based on pre-defined member percentages.
+- Name input during group creation: Users are now prompted to set their name if it's missing when they try to add themselves to a new group.
+
+### Fixed
+- App crash on startup due to database schema mismatch on existing installations.
+- Resiliency of data loading flows to prevent UI crashes on database errors.
+- Build-time `StackOverflowError` in SQLDelight by removing redundant and non-standard migration queries from `.sq` files.
 
 ## [1.2.0] - 2026-05-02
 

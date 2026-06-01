@@ -1,6 +1,7 @@
 package org.oltionzefi.splinge.logic
 
 import org.oltionzefi.splinge.model.*
+import org.oltionzefi.splinge.util.*
 import kotlin.test.*
 
 class SplitCalculatorTest {
@@ -11,10 +12,9 @@ class SplitCalculatorTest {
 
     private fun evenSplit(memberIds: List<String>, total: Double): List<Split> {
         val share = total / memberIds.size
-        return memberIds.map { Split(memberId = it, amount = shareUtil.roundToTwoDecimals(share)) }
+        return memberIds.map { Split(memberId = it, amount = roundToTwoDecimals(share)) }
     }
 
-    private val shareUtil = org.oltionzefi.splinge.util.ShareUtil
 
     private fun group(
         members: List<Member>,
@@ -189,13 +189,31 @@ class SplitCalculatorTest {
         SplitCalculator.calculateNetBalances(g).forEach { (id, balance) -> net[id] = balance }
 
         txns.forEach { t ->
-            net[t.from] = shareUtil.roundToTwoDecimals((net[t.from] ?: 0.0) + t.amount)
-            net[t.to] = shareUtil.roundToTwoDecimals((net[t.to] ?: 0.0) - t.amount)
+            net[t.from] = roundToTwoDecimals((net[t.from] ?: 0.0) + t.amount)
+            net[t.to] = roundToTwoDecimals((net[t.to] ?: 0.0) - t.amount)
         }
 
         net.forEach { (id, balance) ->
             assertTrue(kotlin.math.abs(balance) < 0.02, "Member $id should be settled, but balance is $balance")
         }
+    }
+
+    @Test
+    fun calculateTotalSpent_sumsAllExpenses() {
+        val members = listOf(member("A"), member("B"))
+        val expenses = listOf(
+            Expense("e1", "E1", 10.0, "A", emptyList()),
+            Expense("e2", "E2", 25.5, "B", emptyList()),
+            Expense("e3", "E3", 100.0, "A", emptyList())
+        )
+        val g = group(members, expenses)
+        assertEquals(135.5, SplitCalculator.calculateTotalSpent(g))
+    }
+
+    @Test
+    fun calculateTotalSpent_emptyExpenses_isZero() {
+        val g = group(listOf(member("A")))
+        assertEquals(0.0, SplitCalculator.calculateTotalSpent(g))
     }
 
     @Test
@@ -224,7 +242,7 @@ class SplitCalculatorTest {
     fun amounts_areRoundedToTwoDecimals() {
         // 10 / 3 = 3.333… — ensure no floating-point leakage
         val members = listOf(member("A"), member("B"), member("C"))
-        val share = shareUtil.roundToTwoDecimals(10.0 / 3.0)
+        val share = roundToTwoDecimals(10.0 / 3.0)
         val expense = Expense(
             id = "e1", description = "Split", amount = 10.0, paidById = "A",
             splits = listOf(Split("A", share), Split("B", share), Split("C", share))
@@ -232,7 +250,7 @@ class SplitCalculatorTest {
         val g = group(members, listOf(expense))
         val txns = SplitCalculator.calculateTransactions(g)
         txns.forEach { txn ->
-            val rounded = shareUtil.roundToTwoDecimals(txn.amount)
+            val rounded = roundToTwoDecimals(txn.amount)
             assertEquals(rounded, txn.amount, "Transaction amount ${txn.amount} should be rounded to 2 decimals")
         }
     }
@@ -249,6 +267,77 @@ class SplitCalculatorTest {
         val txns = SplitCalculator.calculateTransactions(g)
 
         txns.forEach { assertNotEquals("A", it.from, "A should never be a debtor here") }
+    }
+
+    // ── PERCENTAGE algorithm ───────────────────────────────────────────────────
+
+    @Test
+    fun percentage_calculatesBasedOnMemberPercentages() {
+        // A (60%), B (40%). Total expense 100 paid by A.
+        // A should contribute 60, B should contribute 40.
+        // A paid 100, so B owes A 40.
+        val members = listOf(
+            Member("A", "Alice", percentage = 60.0),
+            Member("B", "Bob", percentage = 40.0)
+        )
+        val expense = Expense(
+            id = "e1", description = "Rent", amount = 100.0, paidById = "A",
+            splits = emptyList() // Should be ignored in PERCENTAGE mode
+        )
+        val g = group(members, listOf(expense), algo = AlgorithmType.PERCENTAGE)
+        val balances = SplitCalculator.calculateNetBalances(g)
+
+        // A: +100 (paid) -60 (60% of 100) = +40
+        assertEquals(40.0, balances["A"])
+        // B: +0 (paid) -40 (40% of 100) = -40
+        assertEquals(-40.0, balances["B"])
+
+        val txns = SplitCalculator.calculateTransactions(g)
+        assertEquals(1, txns.size)
+        assertEquals("B", txns[0].from)
+        assertEquals("A", txns[0].to)
+        assertEquals(40.0, txns[0].amount)
+    }
+
+    @Test
+    fun percentage_absorbsRoundingDifference() {
+        // A (33.33%), B (33.33%), C (33.34%). Total expense 10.0 paid by A.
+        // A: 10 * 0.3333 = 3.33
+        // B: 10 * 0.3333 = 3.33
+        // C: 10 - 3.33 - 3.33 = 3.34
+        val members = listOf(
+            Member("A", "Alice", percentage = 33.33),
+            Member("B", "Bob", percentage = 33.33),
+            Member("C", "Charlie", percentage = 33.34)
+        )
+        val expense = Expense("e1", "Lunch", 10.0, "A", emptyList())
+        val g = group(members, listOf(expense), algo = AlgorithmType.PERCENTAGE)
+        val balances = SplitCalculator.calculateNetBalances(g)
+
+        // A: +10.0 - 3.33 = 6.67
+        assertEquals(6.67, balances["A"])
+        // B: -3.33
+        assertEquals(-3.33, balances["B"])
+        // C: -3.34
+        assertEquals(-3.34, balances["C"])
+        
+        // Sum should be zero
+        assertEquals(0.0, balances.values.sum())
+    }
+
+    @Test
+    fun percentage_guardAgainstInvalidSum() {
+        // A (50%), B (40%) -> Sum 90%. Logic should return 0 balances to avoid corruption.
+        val members = listOf(
+            Member("A", "Alice", percentage = 50.0),
+            Member("B", "Bob", percentage = 40.0)
+        )
+        val expense = Expense("e1", "Lunch", 100.0, "A", emptyList())
+        val g = group(members, listOf(expense), algo = AlgorithmType.PERCENTAGE)
+        val balances = SplitCalculator.calculateNetBalances(g)
+
+        assertEquals(0.0, balances["A"])
+        assertEquals(0.0, balances["B"])
     }
 }
 

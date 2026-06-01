@@ -1,9 +1,11 @@
 package org.oltionzefi.splinge.db
 
+import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.oltionzefi.splinge.model.*
@@ -14,12 +16,31 @@ import org.oltionzefi.splinge.model.*
  */
 class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatcher: CoroutineDispatcher) {
 
-    private val database = SplingeDatabase(driverFactory.createDriver())
+    private val driver = driverFactory.createDriver()
+    private val database = SplingeDatabase(driver)
     private val groupQ = database.groupQueries
     private val memberQ = database.memberQueries
     private val expenseQ = database.expenseQueries
     private val splitQ = database.splitQueries
     private val settingsQ = database.settingsQueries
+    
+    init {
+        // Run safe migrations for existing databases that might be missing new columns.
+        // These are wrapped in try-catch because ALTER TABLE fails if the column already exists.
+        val migrations = listOf(
+            "ALTER TABLE GroupEntity ADD COLUMN algorithmType TEXT NOT NULL DEFAULT 'DEBT_SIMPLIFICATION';",
+            "ALTER TABLE GroupEntity ADD COLUMN currency TEXT NOT NULL DEFAULT '€';",
+            "ALTER TABLE MemberEntity ADD COLUMN percentage REAL NOT NULL DEFAULT 0.0;"
+        )
+
+        migrations.forEach { sql ->
+            try {
+                driver.execute(null, sql, 0)
+            } catch (e: Exception) {
+                // Column likely already exists or table doesn't exist yet
+            }
+        }
+    }
 
     // ── Groups ────────────────────────────────────────────────────────────────
     
@@ -37,7 +58,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
             try {
                 rows.map { row ->
                     val members = memberQ.selectMembersByGroup(row.id).executeAsList().map { m ->
-                        Member(id = m.id, name = m.name, paypalMe = m.paypalMe)
+                        Member(id = m.id, name = m.name, paypalMe = m.paypalMe, percentage = m.percentage)
                     }
                     val expenses = expenseQ.selectExpensesByGroup(row.id).executeAsList().map { e ->
                         val splits = splitQ.selectSplitsByExpense(e.id, e.groupId).executeAsList().map { s ->
@@ -65,6 +86,9 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
                 // If anything fails during mapping (e.g. missing columns), return empty list
                 emptyList()
             }
+        }.catch { 
+            // Handle query execution errors (e.g. schema mismatch before migration completes)
+            emit(emptyList()) 
         }
 
     suspend fun saveGroup(group: Group) = withContext(ioDispatcher) {
@@ -72,7 +96,7 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
             groupQ.insertGroup(group.id, group.name, group.algorithmType.name, group.currency)
             memberQ.deleteMembersByGroup(group.id)
             group.members.forEach { m ->
-                memberQ.insertMember(m.id, group.id, m.name, m.paypalMe)
+                memberQ.insertMember(m.id, group.id, m.name, m.paypalMe, m.percentage)
             }
             expenseQ.deleteExpensesByGroup(group.id)
             splitQ.deleteSplitsByGroup(group.id)

@@ -40,3 +40,4 @@ xcuserdata
 
 ### Node (for tooling) ###
 node_modules/
+.junie

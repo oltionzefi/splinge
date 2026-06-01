@@ -2,14 +2,32 @@ package org.oltionzefi.splinge.util
 
 import org.oltionzefi.splinge.model.*
 
+fun roundToTwoDecimals(value: Double): Double {
+    val multiplier = 100.0
+    return (kotlin.math.round(value * multiplier) / multiplier)
+}
+
+fun Double.format(digits: Int): String {
+    val rounded = roundToTwoDecimals(this)
+    val s = rounded.toString()
+    if (!s.contains(".")) return "$s.00"
+    val parts = s.split(".")
+    val decimal = parts[1].padEnd(digits, '0').take(digits)
+    return "${parts[0]}.$decimal"
+}
+
 object ShareUtil {
+
 
     fun generateReport(group: Group, transactions: List<Transaction>): String {
         val sb = StringBuilder()
         sb.append("📋 Splinge Report: ${group.name}\n")
         sb.append("--------------------------------\n\n")
+
+        val totalSpent = org.oltionzefi.splinge.logic.SplitCalculator.calculateTotalSpent(group)
+        sb.append("💰 Total Spent: ${group.currency}${totalSpent.format(2)}\n\n")
         
-        sb.append("💰 Balances:\n")
+        sb.append("📊 Balances:\n")
         if (transactions.isEmpty()) {
             sb.append("All settled up! 🎉\n")
         } else {
@@ -112,21 +130,5 @@ object ShareUtil {
     
     fun generateProfilePaypalLink(username: String): String {
         return "paypal.me/$username"
-    }
-
-    // Rounding helper
-    fun roundToTwoDecimals(value: Double): Double {
-        val multiplier = 100.0
-        return (kotlin.math.round(value * multiplier) / multiplier)
-    }
-
-    // Simple format extension (Multiplatform-safe enough for this)
-    fun Double.format(digits: Int): String {
-        val rounded = roundToTwoDecimals(this)
-        val s = rounded.toString()
-        if (!s.contains(".")) return "$s.00"
-        val parts = s.split(".")
-        val decimal = parts[1].padEnd(digits, '0').take(digits)
-        return "${parts[0]}.$decimal"
     }
 }

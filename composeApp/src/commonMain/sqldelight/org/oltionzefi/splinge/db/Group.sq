@@ -24,3 +24,4 @@ DELETE FROM GroupEntity;
 updateGroup:
 UPDATE GroupEntity SET name = ?, algorithmType = ?, currency = ? WHERE id = ?;
 
+

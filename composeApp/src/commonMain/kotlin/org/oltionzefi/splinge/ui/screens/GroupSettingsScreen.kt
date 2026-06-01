@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.oltionzefi.splinge.model.AlgorithmType
 import org.oltionzefi.splinge.model.Group
+import org.oltionzefi.splinge.model.Member
+import org.oltionzefi.splinge.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -16,7 +18,8 @@ fun GroupSettingsScreen(
     group: Group,
     onBack: () -> Unit,
     onAlgorithmChange: (AlgorithmType) -> Unit,
-    onCurrencyChange: (String) -> Unit
+    onCurrencyChange: (String) -> Unit,
+    onMembersUpdate: (List<Member>) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -51,17 +54,79 @@ fun GroupSettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
                             selected = group.algorithmType == AlgorithmType.BASIC,
                             onClick = { onAlgorithmChange(AlgorithmType.BASIC) },
                             label = { Text("Basic") }
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         FilterChip(
                             selected = group.algorithmType == AlgorithmType.DEBT_SIMPLIFICATION,
                             onClick = { onAlgorithmChange(AlgorithmType.DEBT_SIMPLIFICATION) },
                             label = { Text("Smart") }
+                        )
+                        FilterChip(
+                            selected = group.algorithmType == AlgorithmType.PERCENTAGE,
+                            onClick = { onAlgorithmChange(AlgorithmType.PERCENTAGE) },
+                            label = { Text("Percentage") }
+                        )
+                    }
+                }
+            }
+
+            if (group.algorithmType == AlgorithmType.PERCENTAGE) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            "Member Percentages",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                        Text(
+                            "Define how much each member contributes to total costs. Sum must be 100%.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        val totalPercentage = group.members.sumOf { it.percentage }
+                        
+                        group.members.forEach { member ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                Text(member.name, modifier = Modifier.weight(1f))
+                                OutlinedTextField(
+                                    value = if (member.percentage == 0.0) "" else member.percentage.toString(),
+                                    onValueChange = { newValue ->
+                                        val percent = newValue.toDoubleOrNull() ?: 0.0
+                                        val updatedMembers = group.members.map {
+                                            if (it.id == member.id) it.copy(percentage = percent) else it
+                                        }
+                                        onMembersUpdate(updatedMembers)
+                                    },
+                                    modifier = Modifier.width(100.dp),
+                                    suffix = { Text("%") },
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal
+                                    ),
+                                    singleLine = true
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "Total: ${roundToTwoDecimals(totalPercentage)}%",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = if (kotlin.math.abs(totalPercentage - 100.0) < 0.01) 
+                                androidx.compose.ui.graphics.Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
                         )
                     }
                 }

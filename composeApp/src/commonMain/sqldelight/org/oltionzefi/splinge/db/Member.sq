@@ -3,17 +3,19 @@ CREATE TABLE IF NOT EXISTS MemberEntity (
     groupId TEXT NOT NULL,
     name TEXT NOT NULL,
     paypalMe TEXT,
+    percentage REAL NOT NULL DEFAULT 0.0,
     PRIMARY KEY (id, groupId),
     FOREIGN KEY (groupId) REFERENCES GroupEntity(id) ON DELETE CASCADE
 );
 
 insertMember:
-INSERT OR REPLACE INTO MemberEntity(id, groupId, name, paypalMe)
-VALUES (?, ?, ?, ?);
+INSERT OR REPLACE INTO MemberEntity(id, groupId, name, paypalMe, percentage)
+VALUES (?, ?, ?, ?, ?);
 
 selectMembersByGroup:
 SELECT * FROM MemberEntity WHERE groupId = ? ORDER BY rowid ASC;
 
 deleteMembersByGroup:
 DELETE FROM MemberEntity WHERE groupId = ?;
+
 

@@ -6,7 +6,8 @@ import kotlinx.serialization.Serializable
 data class Member(
     val id: String,
     val name: String,
-    val paypalMe: String? = null
+    val paypalMe: String? = null,
+    val percentage: Double = 0.0
 )
 
 @Serializable
@@ -28,7 +29,8 @@ data class Split(
 @Serializable
 enum class AlgorithmType {
     BASIC, // Everyone owes the payer
-    DEBT_SIMPLIFICATION // Minimize total number of transactions
+    DEBT_SIMPLIFICATION, // Minimize total number of transactions
+    PERCENTAGE // Split based on member percentages
 }
 
 @Serializable

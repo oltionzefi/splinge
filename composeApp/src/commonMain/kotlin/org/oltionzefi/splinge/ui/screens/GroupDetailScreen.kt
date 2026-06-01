@@ -22,7 +22,7 @@ import org.oltionzefi.splinge.logic.SplitCalculator
 import org.oltionzefi.splinge.model.AlgorithmType
 import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
-import org.oltionzefi.splinge.util.ShareUtil.format
+import org.oltionzefi.splinge.util.*
 import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,7 +41,7 @@ fun GroupDetailScreen(
 ) {
     val transactions = remember(group.algorithmType, group.expenses, group.members) { SplitCalculator.calculateTransactions(group) }
     val groupedTransactions = remember(transactions) { transactions.groupBy { it.to } }
-    val netBalances = remember(group.expenses, group.members) { SplitCalculator.calculateNetBalances(group) }
+    val netBalances = remember(group.algorithmType, group.expenses, group.members) { SplitCalculator.calculateNetBalances(group) }
     var showMaxMembersAlert by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
@@ -215,11 +215,36 @@ fun GroupDetailScreen(
             }
 
             // Balances Section
-            if (transactions.isNotEmpty()) {
+            if (group.expenses.isNotEmpty()) {
                 item {
-                    Text("Balances", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 16.dp))
+                    val totalSpent = remember(group.expenses) { SplitCalculator.calculateTotalSpent(group) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Balances", style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            "Total Spent: ${group.currency}${totalSpent.format(2)}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
+                
+                if (transactions.isEmpty()) {
+                    item {
+                        Text(
+                            "All settled up! 🎉",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    }
+                }
+            }
 
+            if (transactions.isNotEmpty()) {
                 groupedTransactions.forEach { (creditorId, txs) ->
                     val creditorName = group.members.find { it.id == creditorId }?.name ?: "Unknown"
                     val totalOwedToCreditor = txs.sumOf { it.amount }
@@ -337,8 +362,13 @@ fun GroupDetailScreen(
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(expense.description, style = MaterialTheme.typography.titleMedium)
+                                val splitCount = if (group.algorithmType == AlgorithmType.PERCENTAGE) {
+                                    group.members.size
+                                } else {
+                                    expense.splits.size
+                                }
                                 Text(
-                                    "Paid by $payer • Split among ${expense.splits.size}",
+                                    "Paid by $payer • Split among $splitCount",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

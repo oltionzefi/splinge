@@ -46,6 +46,17 @@ class ShareUtilTest {
     // ── generateReport ─────────────────────────────────────────────────────────
 
     @Test
+    fun generateReport_containsTotalSpent() {
+        val expense = Expense(
+            id = "e1", description = "Hotel", amount = 120.0, paidById = "A",
+            splits = emptyList()
+        )
+        val g = baseGroup(expenses = listOf(expense))
+        val report = ShareUtil.generateReport(g, emptyList())
+        assertTrue(report.contains("Total Spent: €120.00"), "Should show total spent with currency")
+    }
+
+    @Test
     fun generateReport_noExpensesNoTransactions_allSettledMessage() {
         val report = ShareUtil.generateReport(baseGroup(), emptyList())
         assertTrue(report.contains("All settled up!"), "Should show settled message")
