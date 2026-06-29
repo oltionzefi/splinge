@@ -200,9 +200,55 @@ fun App() {
                             onAddExpense = { currentScreen = Screen.AddExpense(group.id) },
                             onEditExpense = { expense -> currentScreen = Screen.EditExpense(group.id, expense.id) },
                             onShare = {
-                                val transactions = SplitCalculator.calculateTransactions(group)
-                                val report = ShareUtil.generateReport(group, transactions)
-                                platform.shareText(report, "Splinge Report: ${group.name}")
+                                scope.launch {
+                                    val totalCount = repository.getExpenseCount(group.id)
+                                    val allExpenses = mutableListOf<Expense>()
+                                    var offset = 0L
+                                    val dbBatchSize = 50L
+                                    
+                                    while (offset < totalCount) {
+                                        val batch = repository.getExpensesPaginated(group.id, dbBatchSize, offset)
+                                        if (batch.isEmpty()) break
+                                        allExpenses.addAll(batch)
+                                        offset += dbBatchSize
+                                    }
+                                    
+                                    val groupWithAllExpenses = group.copy(expenses = allExpenses)
+                                    val transactions = SplitCalculator.calculateTransactions(groupWithAllExpenses)
+
+                                    val report = ShareUtil.generateReport(groupWithAllExpenses, transactions)
+                                    
+                                    // Fallback splitting by character count if still too large
+                                    val maxMessageSize = 15000
+                                    if (report.length > maxMessageSize) {
+                                        val parts = report.chunked(maxMessageSize)
+                                        parts.forEachIndexed { idx, part ->
+                                            platform.shareText(part, "Splinge Report Part ${idx + 1}: ${group.name}")
+                                        }
+                                    } else {
+                                        platform.shareText(report, "Splinge Report: ${group.name}")
+                                    }
+                                }
+                            },
+                            onShareOverview = {
+                                scope.launch {
+                                    val totalCount = repository.getExpenseCount(group.id)
+                                    val allExpenses = mutableListOf<Expense>()
+                                    var offset = 0L
+                                    val batchSize = 50L
+                                    
+                                    while (offset < totalCount) {
+                                        val batch = repository.getExpensesPaginated(group.id, batchSize, offset)
+                                        if (batch.isEmpty()) break
+                                        allExpenses.addAll(batch)
+                                        offset += batchSize
+                                    }
+                                    
+                                    val groupWithAllExpenses = group.copy(expenses = allExpenses)
+                                    val transactions = SplitCalculator.calculateTransactions(groupWithAllExpenses)
+                                    val report = ShareUtil.generateReport(groupWithAllExpenses, transactions, includeExpenses = false)
+                                    platform.shareText(report, "Splinge Overview: ${group.name}")
+                                }
                             },
                             onAlgorithmChange = { newType ->
                                 scope.launch { repository.saveGroup(group.copy(algorithmType = newType)) }
@@ -215,6 +261,49 @@ fun App() {
                             onDelete = {
                                 scope.launch { repository.deleteGroup(group.id) }
                                 currentScreen = Screen.GroupList
+                            },
+                            onShareExpense = { expense ->
+                                val report = ShareUtil.generateExpenseReport(group, expense)
+                                platform.shareText(report, "Expense: ${expense.description}")
+                            },
+                            onShareMemberBalance = { member, balance ->
+                                val report = ShareUtil.generateMemberBalanceReport(group, member, balance)
+                                platform.shareText(report, "Balance for ${member.name}")
+                            },
+                            onShareTransaction = { transaction ->
+                                val report = ShareUtil.generateTransactionReport(group, transaction)
+                                platform.shareText(report, "Payment Request")
+                            },
+                            onShareExpensesPart = { index ->
+                                scope.launch {
+                                    val totalCount = repository.getExpenseCount(group.id)
+                                    val allExpenses = mutableListOf<Expense>()
+                                    var offset = 0L
+                                    val dbBatchSize = 50L
+                                    
+                                    while (offset < totalCount) {
+                                        val batch = repository.getExpensesPaginated(group.id, dbBatchSize, offset)
+                                        if (batch.isEmpty()) break
+                                        allExpenses.addAll(batch)
+                                        offset += dbBatchSize
+                                    }
+                                    
+                                    val groupWithAllExpenses = group.copy(expenses = allExpenses)
+                                    val chunkSize = 70
+                                    val startIdx = index * chunkSize
+                                    val endIdx = (startIdx + chunkSize - 1).coerceAtMost(allExpenses.size - 1)
+                                    
+                                    if (startIdx < allExpenses.size) {
+                                        val partReport = ShareUtil.generateReport(
+                                            group = groupWithAllExpenses,
+                                            transactions = emptyList(),
+                                            includeExpenses = true,
+                                            expenseRange = startIdx..endIdx,
+                                            includeOverview = false
+                                        )
+                                        platform.shareText(partReport, "Expenses part ${index + 1}: ${group.name}")
+                                    }
+                                }
                             }
                         )
                     } else {

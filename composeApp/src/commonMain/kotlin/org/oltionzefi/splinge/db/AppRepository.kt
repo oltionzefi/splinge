@@ -60,6 +60,9 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
                     val members = memberQ.selectMembersByGroup(row.id).executeAsList().map { m ->
                         Member(id = m.id, name = m.name, paypalMe = m.paypalMe, percentage = m.percentage)
                     }
+                    // For the global flow, we might want to keep the expense list empty or limited
+                    // to avoid massive memory consumption. But for now, we'll keep it as is
+                    // to avoid breaking other parts of the UI that expect it.
                     val expenses = expenseQ.selectExpensesByGroup(row.id).executeAsList().map { e ->
                         val splits = splitQ.selectSplitsByExpense(e.id, e.groupId).executeAsList().map { s ->
                             Split(memberId = s.memberId, amount = s.amount)
@@ -90,6 +93,34 @@ class AppRepository(driverFactory: DatabaseDriverFactory, private val ioDispatch
             // Handle query execution errors (e.g. schema mismatch before migration completes)
             emit(emptyList()) 
         }
+
+    suspend fun getExpenseCount(groupId: String): Int = withContext(ioDispatcher) {
+        try {
+            expenseQ.countExpensesByGroup(groupId).executeAsOne().toInt()
+        } catch (e: Exception) {
+            0
+        }
+    }
+
+    suspend fun getExpensesPaginated(groupId: String, limit: Long, offset: Long): List<Expense> = withContext(ioDispatcher) {
+        try {
+            expenseQ.selectExpensesByGroupPaginated(groupId, limit, offset).executeAsList().map { e ->
+                val splits = splitQ.selectSplitsByExpense(e.id, e.groupId).executeAsList().map { s ->
+                    Split(memberId = s.memberId, amount = s.amount)
+                }
+                Expense(
+                    id = e.id,
+                    description = e.description,
+                    amount = e.amount,
+                    paidById = e.paidById,
+                    splits = splits,
+                    date = e.date
+                )
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     suspend fun saveGroup(group: Group) = withContext(ioDispatcher) {
         database.transaction {

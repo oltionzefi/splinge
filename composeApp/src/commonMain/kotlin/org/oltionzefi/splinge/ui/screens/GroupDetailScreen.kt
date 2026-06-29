@@ -16,12 +16,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import org.oltionzefi.splinge.logic.SplitCalculator
 import org.oltionzefi.splinge.model.AlgorithmType
 import org.oltionzefi.splinge.model.Expense
 import org.oltionzefi.splinge.model.Group
+import org.oltionzefi.splinge.model.Member
+import org.oltionzefi.splinge.model.Transaction
 import org.oltionzefi.splinge.util.*
 import org.oltionzefi.splinge.ui.components.SimpleAlertDialog
 
@@ -33,11 +36,16 @@ fun GroupDetailScreen(
     onAddExpense: () -> Unit,
     onEditExpense: (Expense) -> Unit,
     onShare: () -> Unit,
+    onShareOverview: () -> Unit,
     onAlgorithmChange: (AlgorithmType) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onAddMember: () -> Unit,
     onSettings: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShareExpense: (Expense) -> Unit,
+    onShareMemberBalance: (Member, Double) -> Unit,
+    onShareTransaction: (Transaction) -> Unit,
+    onShareExpensesPart: (Int) -> Unit
 ) {
     val transactions = remember(group.algorithmType, group.expenses, group.members) { SplitCalculator.calculateTransactions(group) }
     val groupedTransactions = remember(transactions) { transactions.groupBy { it.to } }
@@ -45,6 +53,81 @@ fun GroupDetailScreen(
     var showMaxMembersAlert by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showShareOptions by remember { mutableStateOf(false) }
+
+    if (showShareOptions) {
+        Dialog(onDismissRequest = { showShareOptions = false }) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                tonalElevation = 6.dp,
+                modifier = Modifier.padding(16.dp).fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(text = "Share Options", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "This group has many expenses. How would you like to share?",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Button(
+                        onClick = {
+                            showShareOptions = false
+                            onShareOverview()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Info, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Share Overview Only")
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    if (group.expenses.size > 70) {
+                        val partsCount = (group.expenses.size + 69) / 70
+                        repeat(partsCount) { index ->
+                            OutlinedButton(
+                                onClick = {
+                                    showShareOptions = false
+                                    onShareExpensesPart(index)
+                                },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.List, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text("Share Expenses part ${index + 1}")
+                            }
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = {
+                                showShareOptions = false
+                                onShare()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.List, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Share Full List")
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextButton(
+                        onClick = { showShareOptions = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
+    }
 
     if (showMaxMembersAlert) {
         SimpleAlertDialog(
@@ -78,7 +161,13 @@ fun GroupDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onShare) {
+                    IconButton(onClick = {
+                        if (group.expenses.size > 70) {
+                            showShareOptions = true
+                        } else {
+                            onShare()
+                        }
+                    }) {
                         Icon(Icons.Default.Share, contentDescription = "Share")
                     }
                     Box {
@@ -286,6 +375,15 @@ fun GroupDetailScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                                Spacer(Modifier.weight(1f))
+                                IconButton(onClick = {
+                                    val member = group.members.find { it.id == creditorId }
+                                    if (member != null) {
+                                        onShareMemberBalance(member, totalOwedToCreditor)
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share Balance", tint = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         }
                     }
@@ -319,6 +417,9 @@ fun GroupDetailScreen(
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.secondary
                                 )
+                                IconButton(onClick = { onShareTransaction(tx) }) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share Payment", modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                                }
                             }
                         }
                     }
@@ -378,6 +479,9 @@ fun GroupDetailScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                             )
+                            IconButton(onClick = { onShareExpense(expense) }) {
+                                Icon(Icons.Default.Share, contentDescription = "Share Expense", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     }
                 }

@@ -44,6 +44,11 @@ composeApp/src/commonMain/kotlin/org/oltionzefi/splinge/
 * [`composeApp/src/iosMain/`](./composeApp/src/iosMain/kotlin) — iOS entry point (`MainViewController`) and `Platform` implementation.
 * [`iosApp/`](./iosApp/iosApp) — Xcode project and SwiftUI wrapper for the shared Compose UI.
 
+## Prerequisites
+
+- **JDK**: Java 21 is required to build the project.
+- **iOS**: A full installation of **Xcode** is required for Kotlin/Native and iOS-specific tasks. Command Line Tools are not sufficient.
+
 ## Build and Run
 
 ### Android

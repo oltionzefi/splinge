@@ -16,6 +16,12 @@ VALUES (?, ?, ?, ?, ?, ?);
 selectExpensesByGroup:
 SELECT * FROM ExpenseEntity WHERE groupId = ? ORDER BY rowid ASC;
 
+selectExpensesByGroupPaginated:
+SELECT * FROM ExpenseEntity WHERE groupId = ? ORDER BY rowid ASC LIMIT ? OFFSET ?;
+
+countExpensesByGroup:
+SELECT COUNT(*) FROM ExpenseEntity WHERE groupId = ?;
+
 deleteExpensesByGroup:
 DELETE FROM ExpenseEntity WHERE groupId = ?;
 

@@ -4,6 +4,7 @@ This document provides detailed instructions for AI agents working on the Spling
 
 ## Tech Stack
 - **Language**: Kotlin 2.x
+- **JDK**: Java 21 (Required)
 - **UI Framework**: Compose Multiplatform (Android & iOS)
 - **Architecture**: MVI-ish state management.
     - Global state lives in `App.kt` via `MutableStateFlow`.
@@ -46,8 +47,11 @@ This document provides detailed instructions for AI agents working on the Spling
 - Prefer `StateFlow` for exposure to the UI.
 
 ## Development Workflow
+- **Environment**: 
+    - Use Java 21 for all Gradle tasks.
+    - Full **Xcode** installation is required for any iOS-related tasks (compilation, native tests). Command Line Tools are not enough.
 - **Linting**: Run `./gradlew :composeApp:lintDebug` (Android) to check for common issues.
-- **Tests**: Run `./gradlew :composeApp:commonTest`. Always add/update tests in `commonTest` for logic changes.
+- **Tests**: Run `./gradlew :composeApp:commonTest`. If the iOS environment is unavailable, use `./gradlew :composeApp:testDebugUnitTest` to at least verify common logic on the JVM. Always add/update tests in `commonTest` for logic changes.
 - **Changelog**: Every PR/change should include a brief entry in `CHANGELOG.md`.
 
 ## Agent Behavior Guidelines

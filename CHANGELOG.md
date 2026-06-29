@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.3] - 2026-06-29
+### Added
+- Individual "Share Expenses part X" buttons for large groups (>70 expenses), allowing users to share specific segments of the expense list one by one.
+- Improved sharing for large groups (>70 expenses):
+    - Added option to share an overview report (settlements and totals) without the full expense list.
+    - Automatic splitting of the full expense list into sequential parts of 70 items each for reliable sharing on platforms like WhatsApp.
+- Full iOS support for sharing: Implemented native sharing and URL opening for iOS devices.
+- Paginated expense fetching (50 per batch) for improved performance with very large groups.
+- Granular sharing options: Added individual share buttons for expenses, member balances, and payment requests.
+
+### Fixed
+- PayPal links: Added `https://` prefix to all generated PayPal links for better platform compatibility and clickability.
+- iOS functionality: Fixed "in device does not work" by implementing native platform APIs for sharing and URL management.
+
+### Changed
+- Refined multi-part sharing format:
+    - Sequential messages are now named "Expenses part 1, 2, ..." for better clarity.
+    - Expense part messages now only contain the specific expense list, with the group overview sent as a separate initial message.
+- Restored detailed report formatting: Re-introduced full labels (e.g., "Paid by"), decorative separators, and comprehensive headers even for large groups.
+- UI improvements: Added Group Summary (member and expense counts) and total spent display to reports and screens.
+- Environment: Updated documentation and guidelines for Java 21 and Xcode requirements.
+
 ## [1.3.0] - 2026-06-01
 
 ### Added
